@@ -2,11 +2,10 @@
 
 import os
 import jieba
-jieba.set_dictionary('thucnews.vocab') # 手动截取前50000个词
 
+jieba.set_dictionary('thucnews.vocab')  # 手动截取前50000个词
 
 jieba.lcut(u'今天天气很不错')
-
 
 F = open('myresult.txt', 'w')
 
@@ -17,7 +16,6 @@ with open('../testing/pku_test.txt') as f:
         l += '\r\n'
         l = l.encode('gbk')
         F.write(l)
-
 
 F.close()
 

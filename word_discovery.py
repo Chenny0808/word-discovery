@@ -4,6 +4,7 @@ import struct
 import os
 import math
 import logging
+
 logging.basicConfig(level=logging.INFO, format=u'%(asctime)s - %(levelname)s - %(message)s')
 
 
@@ -13,6 +14,7 @@ class Progress:
     period: 显示进度的周期；
     steps: iterator可迭代的总步数，相当于len(iterator)
     """
+
     def __init__(self, iterator, period=1, steps=None, desc=None):
         self.iterator = iterator
         self.period = period
@@ -22,16 +24,17 @@ class Progress:
             self.steps = steps
         self.desc = desc
         if self.steps:
-            self._format_ = u'%s/%s passed' %('%s', self.steps)
+            self._format_ = u'%s/%s passed' % ('%s', self.steps)
         else:
             self._format_ = u'%s passed'
         if self.desc:
             self._format_ = self.desc + ' - ' + self._format_
         self.logger = logging.getLogger()
+
     def __iter__(self):
         for i, j in enumerate(self.iterator):
             if (i + 1) % self.period == 0:
-                self.logger.info(self._format_ % (i+1))
+                self.logger.info(self._format_ % (i + 1))
             yield j
 
 
@@ -42,6 +45,7 @@ class KenlmNgrams:
     order: 统计ngram时设置的n，必须跟ngram_file对应；
     min_count: 自行设置的截断频数。
     """
+
     def __init__(self, vocab_file, ngram_file, order, min_count):
         self.vocab_file = vocab_file
         self.ngram_file = ngram_file
@@ -49,12 +53,14 @@ class KenlmNgrams:
         self.min_count = min_count
         self.read_chars()
         self.read_ngrams()
+
     def read_chars(self):
         f = open(self.vocab_file)
         chars = f.read()
         f.close()
         chars = chars.split('\x00')
         self.chars = [i.decode('utf-8') for i in chars]
+
     def read_ngrams(self):
         """读取思路参考https://github.com/kpu/kenlm/issues/201
         """
@@ -66,14 +72,15 @@ class KenlmNgrams:
         filesize = f.tell()
         f.close()
         for i in Progress(range(0, filesize, size_per_item), 100000, desc=u'loading ngrams'):
-            s = filedata[i: i+size_per_item]
+            s = filedata[i: i + size_per_item]
             n = self.unpack('l', s[-8:])
             if n >= self.min_count:
                 self.total += n
-                c = [self.unpack('i', s[j*4: (j+1)*4]) for j in range(self.order)]
+                c = [self.unpack('i', s[j * 4: (j + 1) * 4]) for j in range(self.order)]
                 c = ''.join([self.chars[j] for j in c if j > 2])
                 for j in range(len(c)):
-                    self.ngrams[j][c[:j+1]] = self.ngrams[j].get(c[:j+1], 0) + n
+                    self.ngrams[j][c[:j + 1]] = self.ngrams[j].get(c[:j + 1], 0) + n
+
     def unpack(self, t, s):
         return struct.unpack(t, s)[0]
 
@@ -106,10 +113,10 @@ def filter_ngrams(ngrams, total, min_pmi=1):
         min_pmi = [min_pmi] * order
     output_ngrams = set()
     total = float(total)
-    for i in range(order-1, 0, -1):
+    for i in range(order - 1, 0, -1):
         for w, v in ngrams[i].items():
             pmi = min([
-                total * v / (ngrams[j].get(w[:j+1], total) * ngrams[i-j-1].get(w[j+1:], total))
+                total * v / (ngrams[j].get(w[:j + 1], total) * ngrams[i - j - 1].get(w[j + 1:], total))
                 for j in range(i)
             ])
             if math.log(pmi) >= min_pmi[i]:
@@ -120,9 +127,11 @@ def filter_ngrams(ngrams, total, min_pmi=1):
 class SimpleTrie:
     """通过Trie树结构，来搜索ngrams组成的连续片段
     """
+
     def __init__(self):
         self.dic = {}
         self.end = True
+
     def add_word(self, word):
         _ = self.dic
         for c in word:
@@ -130,14 +139,15 @@ class SimpleTrie:
                 _[c] = {}
             _ = _[c]
         _[self.end] = word
-    def tokenize(self, sent): # 通过最长联接的方式来对句子进行分词
+
+    def tokenize(self, sent):  # 通过最长联接的方式来对句子进行分词
         result = []
         start, end = 0, 1
         for i, c1 in enumerate(sent):
             _ = self.dic
             if i == end:
                 result.append(sent[start: end])
-                start, end = i, i+1
+                start, end = i, i + 1
             for j, c2 in enumerate(sent[i:]):
                 if c2 in _:
                     _ = _[c2]
@@ -162,7 +172,7 @@ def filter_vocab(candidates, ngrams, order):
         elif len(i) > order:
             flag = True
             for k in range(len(i) + 1 - order):
-                if i[k: k+order] not in ngrams:
+                if i[k: k + order] not in ngrams:
                     flag = False
             if flag:
                 result[i] = j
@@ -173,6 +183,7 @@ def filter_vocab(candidates, ngrams, order):
 
 import re
 import glob
+
 
 # 语料生成器，并且初步预处理语料
 # 这个生成器例子的具体含义不重要，只需要知道它就是逐句地把文本yield出来就行了
@@ -186,24 +197,23 @@ def text_generator():
 
 min_count = 32
 order = 4
-corpus_file = 'thucnews.corpus' # 语料保存的文件名
-vocab_file = 'thucnews.chars' # 字符集
-ngram_file = 'thucnews.ngrams' # ngram集
-output_file = 'thucnews.vocab' # 最后导出的词表
+corpus_file = 'thucnews.corpus'  # 语料保存的文件名
+vocab_file = 'thucnews.chars'  # 字符集
+ngram_file = 'thucnews.ngrams'  # ngram集
+output_file = 'thucnews.vocab'  # 最后导出的词表
 
-
-write_corpus(text_generator(), corpus_file) # 将语料转存为文本
-count_ngrams(corpus_file, order, vocab_file, ngram_file) # 用Kenlm统计ngram
-ngrams = KenlmNgrams(vocab_file, ngram_file, order, min_count) # 加载ngram
-ngrams = filter_ngrams(ngrams.ngrams, ngrams.total, [0, 2, 4, 6]) # 过滤ngram
-ngtrie = SimpleTrie() # 构建ngram的Trie树
+write_corpus(text_generator(), corpus_file)  # 将语料转存为文本
+count_ngrams(corpus_file, order, vocab_file, ngram_file)  # 用Kenlm统计ngram
+ngrams = KenlmNgrams(vocab_file, ngram_file, order, min_count)  # 加载ngram
+ngrams = filter_ngrams(ngrams.ngrams, ngrams.total, [0, 2, 4, 6])  # 过滤ngram
+ngtrie = SimpleTrie()  # 构建ngram的Trie树
 
 for w in Progress(ngrams, 100000, desc=u'build ngram trie'):
     _ = ngtrie.add_word(w)
 
-candidates = {} # 得到候选词
+candidates = {}  # 得到候选词
 for t in Progress(text_generator(), 1000, desc='discovering words'):
-    for w in ngtrie.tokenize(t): # 预分词
+    for w in ngtrie.tokenize(t):  # 预分词
         candidates[w] = candidates.get(w, 0) + 1
 
 # 频数过滤

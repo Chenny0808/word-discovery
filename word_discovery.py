@@ -9,7 +9,8 @@ logging.basicConfig(level=logging.INFO, format=u'%(asctime)s - %(levelname)s - %
 
 
 class Progress:
-    """显示进度，自己简单封装，比tqdm更可控一些
+    """
+    显示进度，自己简单封装，比tqdm更可控一些
     iterator: 可迭代的对象；
     period: 显示进度的周期；
     steps: iterator可迭代的总步数，相当于len(iterator)
@@ -39,13 +40,13 @@ class Progress:
 
 
 class KenlmNgrams:
-    """加载Kenlm的ngram统计结果
+    """
+    加载Kenlm的ngram统计结果
     vocab_file: Kenlm统计出来的词(字)表；
     ngram_file: Kenlm统计出来的ngram表；
     order: 统计ngram时设置的n，必须跟ngram_file对应；
     min_count: 自行设置的截断频数。
     """
-
     def __init__(self, vocab_file, ngram_file, order, min_count):
         self.vocab_file = vocab_file
         self.ngram_file = ngram_file
@@ -62,7 +63,8 @@ class KenlmNgrams:
         self.chars = [i.decode('utf-8') for i in chars]
 
     def read_ngrams(self):
-        """读取思路参考https://github.com/kpu/kenlm/issues/201
+        """
+        读取思路参考https://github.com/kpu/kenlm/issues/201
         """
         self.ngrams = [{} for _ in range(self.order)]
         self.total = 0
@@ -86,16 +88,18 @@ class KenlmNgrams:
 
 
 def write_corpus(texts, filename):
-    """将语料写到文件中，词与词(字与字)之间用空格隔开
+    """
+    将语料写到文件中，词与词(字与字)之间用空格隔开
     """
     with open(filename, 'w') as f:
         for s in Progress(texts, 10000, desc=u'exporting corpus'):
             s = ' '.join(s) + '\n'
-            f.write(s.encode('utf-8'))
-
+            # f.write(s.encode('utf-8'))
+            f.write(s)
 
 def count_ngrams(corpus_file, order, vocab_file, ngram_file):
-    """通过os.system调用Kenlm的count_ngrams来统计频数
+    """
+    通过os.system调用Kenlm的count_ngrams来统计频数
     """
     return os.system(
         './count_ngrams -o %s --write_vocab_list %s <%s >%s'
@@ -104,7 +108,8 @@ def count_ngrams(corpus_file, order, vocab_file, ngram_file):
 
 
 def filter_ngrams(ngrams, total, min_pmi=1):
-    """通过互信息过滤ngrams，只保留“结实”的ngram。
+    """
+    通过互信息过滤ngrams，只保留“结实”的ngram。
     """
     order = len(ngrams)
     if hasattr(min_pmi, '__iter__'):
@@ -125,9 +130,9 @@ def filter_ngrams(ngrams, total, min_pmi=1):
 
 
 class SimpleTrie:
-    """通过Trie树结构，来搜索ngrams组成的连续片段
     """
-
+    通过Trie树结构，来搜索ngrams组成的连续片段
+    """
     def __init__(self):
         self.dic = {}
         self.end = True
@@ -161,7 +166,8 @@ class SimpleTrie:
 
 
 def filter_vocab(candidates, ngrams, order):
-    """通过与ngrams对比，排除可能出来的不牢固的词汇(回溯)
+    """
+    通过与ngrams对比，排除可能出来的不牢固的词汇(回溯)
     """
     result = {}
     for i, j in candidates.items():
@@ -188,10 +194,12 @@ import glob
 # 语料生成器，并且初步预处理语料
 # 这个生成器例子的具体含义不重要，只需要知道它就是逐句地把文本yield出来就行了
 def text_generator():
-    txts = glob.glob('/root/thuctc/THUCNews/*/*.txt')
+    txts = glob.glob('/home/guopengcheng/NLP资料/语料/THUCNews/科技/*.txt')
+    print('size of the corpus', len(txts))
     for txt in txts:
         d = open(txt).read()
-        d = d.decode('utf-8').replace(u'\u3000', ' ').strip()
+        # d = d.decode('utf-8').replace(u'\u3000', ' ').strip()
+        d = d.replace(u'\u3000', ' ').strip()
         yield re.sub(u'[^\u4e00-\u9fa50-9a-zA-Z ]+', '\n', d)
 
 
